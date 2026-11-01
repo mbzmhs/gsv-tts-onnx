@@ -1,8 +1,10 @@
 # GSV TTS ONNX 模型包契约 (Model Package Contract) v1
 
-C 推理引擎 (`gsvtts.dll`) 消费的 ONNX 模型包格式。导出由用户侧 Python 完成：
-**一键工具 `tools/convert_sovits.py`**（SoVITS 逐音色 + GPT/t2s 共享，纯 fp16 I/O，
-可选 `--no-fp32`、`--device auto|cuda|cpu` 优先 GPU、`--force` 重导），本文件是双方的接口约定。
+C 推理引擎 (`gsvtts.dll`) 消费的 ONNX 模型包格式。导出由用户侧 Python 完成，两把一键工具：
+**`tools/convert_sovits.py`**（GPT/t2s 共享 + SoVITS 逐音色，纯 fp16 I/O，可选 `--no-fp32`、
+`--device auto|cuda|cpu` 优先 GPU、`--force` 重导）与 **`tools/convert_features.py`**
+（共享基础：bert int8 / hubert / sv / ge / vq，全程 CPU，含 BERT 的 MatMul-only int8 量化），
+本文件是双方的接口约定。
 
 ## dtype 策略（核心）
 
@@ -50,7 +52,7 @@ C 推理引擎 (`gsvtts.dll`) 消费的 ONNX 模型包格式。导出由用户�
   g2p/                           # C 侧 G2P 数据（按语言；dispatcher 按需加载，缺失则该语言不可用）
     zh/                          # jieba_dict.txt / pinyin.bin / hmm.bin / finalseg.bin / phrases.bin ...
     en/                          # cmu.bin namedict.bin pos_tag.bin wseg_uni.bin wseg_bi.bin gru.bin
-                                   #   （由 tools/gen_en_data.py 打包；见下）
+                                   #   （6 个 .bin 已随本仓库 dist/g2p/en/ 分发，见下）
     ja/                          # OpenJTalk dicdir：sys.dic unk.dic matrix.bin rewrite.def char.bin *.def
 ```
 
@@ -63,9 +65,9 @@ C 推理引擎 (`gsvtts.dll`) 消费的 ONNX 模型包格式。导出由用户�
 >     variant 由设备决定（CPU=`fp32`、CUDA=`fp16`），见 `src/engine.c resolve_named()`。
 > 底模（fallback）= GPT `gpt/s1v3` + SoVITS `voices/s2Gv2ProPlus`；未配专属模型的音色自动落到底模。
 
-> **g2p/en** 的 6 个 `.bin`（little-endian）由 `tools/gen_en_data.py <outdir>` 从原始输入
-> （cmudict.rep / namedict_cache.pickle / g2p_en/checkpoint20.npz / nltk tagger+wordsegment）生成；
-> 同脚本另产 `homographs_en.h` / `en_phonemes.h`（C 端 `#include`，需与 `src/g2p/` 一致，否则重编 DLL）。
+> **g2p/en** 的 6 个 `.bin`（little-endian）已随本仓库 `dist/g2p/en/` 分发，打包模型包时复制到
+> `<pkg>/g2p/en/` 即可。它们与 C 端 `#include` 的 `homographs_en.h` / `en_phonemes.h`
+> （`src/g2p/`）是同一批源数据生成的配套产物，不可单独更换其一。
 
 ## manifest.json
 
@@ -267,4 +269,24 @@ python tools/convert_sovits.py \
 - **SoVITS**：`enc_p_{fp32,fp16}.onnx` + `flowdec_{fp32,fp16}.onnx`（默认双 dtype；`--no-fp32` 只出 fp16）。
 - **GPT/t2s**：`t2s_prefill_fp16.onnx` + `t2s_step_fp16.onnx`（仅 fp16）。
 - 每张图 ORT↔torch 对拍 + `_fp16` 纯 fp16 I/O 结构校验；`--force` 删除目标后重导+重校验。
-- **共享特征**（hubert/sv/ge/bert）不在此工具范围，沿用既有导出产物（`features/*_fp16.onnx` / `bert_int8.onnx`）。
+
+## 导出工具 `tools/convert_features.py`（共享基础）
+
+一键导出契约的其余基础产物（全程 CPU）：
+
+```bash
+python tools/convert_features.py \
+    --models-dir models/ \                       # HF 底模：chinese-roberta-wwm-ext-large、chinese-hubert-base、sv/
+    [--sovits SoVITS_weights_v2ProPlus/<voice>.pth]   # ge 与 vq 从其 vq 提取；缺省则跳过这两步
+    --out <pkg_root> \                           # → <out>/features/、<out>/text/、<out>/vq/
+    [--keep-fp32] [--no-verify] [--force]
+```
+
+- **BERT**：fp32 导出并对拍 → `quantize_dynamic(weight_type=QInt8, op_types_to_quantize=["MatMul"])`
+  → `features/bert_int8.onnx`（1198MB→367MB，I/O dtype 不变；特征 rel-L2 ~0.2 为该配方设计内水平，
+  BERT 输出仅作条件特征，参考实现全链路实测有效）；`--keep-fp32` 保留 fp32 版作 `fallback_onnx`。
+  同时产 `text/vocab.txt`（C 端分词词表）与 `token_snapshot.json` 等对拍参考。
+- **hubert / sv / ge**：纯 fp16 I/O 导出 + 结构校验 + CPU-EP 数值校验（运行失败仅 warn，
+  非有限值/超致命阈才 assert——CPU fp16 kernel 精度不能作为 CUDA 部署判据，见脚本 docstring）。
+- **vq**：`codebook.bin`（fp32 [1024,768]）+ `ssl_proj.bin`（Conv1d k=2 s=2 权重+偏置），
+  需 `--sovits`。
