@@ -95,8 +95,8 @@ C 推理引擎 (`gsvtts.dll`) 消费的 ONNX 模型包格式。导出由用户�
     "input_names": ["input_ids", "attention_mask"],   // int64
     "output_names": ["hidden_states"],                // float32 [B,L,1024] = hidden_states[-3]
     "dim": 1024,
-    "max_length": 512,             // tokenizer truncation
-    "use_for_langs": ["zh"],       // 仅 zh 段走 BERT，其它语言填零
+    "max_length": 512,             // tokenizer truncation（元数据：C 端硬编码 512，见 src/bert_tok.c；改此值需重编）
+    "use_for_langs": ["zh"],       // 仅 zh 段走 BERT，其它语言填零（元数据：C 端当前硬编码仅 zh；多语言预留）
     "dtype": "int8",
     "quant": "dynamic-int8-matmul",
     "fallback_onnx": "features/bert.onnx"   // C 端当前不使用（预留回退）
