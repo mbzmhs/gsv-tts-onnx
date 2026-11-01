@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GsvTts.Example</RootNamespace>
+    <!-- The native gsvtts.dll is Windows x64; build & run this on Windows. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GsvTts\GsvTts.csproj" />
+  </ItemGroup>
+
+</Project>

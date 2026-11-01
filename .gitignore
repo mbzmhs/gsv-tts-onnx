@@ -1,0 +1,51 @@
+# ============================================================
+# gsv-tts-onnx — .gitignore
+# ============================================================
+
+# --- CMake / Ninja build output (regenerable) ---
+build/
+build-win/
+cmake-build-*/
+out/
+CMakeCache.txt
+CMakeFiles/
+*.ninja_log
+
+# --- Compiled objects / static libs (regenerable; real ones live under build/) ---
+*.o
+*.obj
+*.a
+
+# --- Internal dev notes (kept locally, not committed) ---
+docs/NOTES.md
+docs/TODOS.md
+
+# --- onnxruntime runtime DLLs (~333 MB, NOT committed) ----------------------
+# Only the binary DLLs are ignored — the C headers under
+# third_party/onnxruntime/include/ ARE tracked. To obtain them for a fresh
+# clone (ONNX Runtime 1.23.2, Windows x64):
+#   CPU : https://github.com/microsoft/onnxruntime/releases/tag/v1.23.2
+#         -> onnxruntime-win-x64-1.23.2.zip  -> lib/*.dll
+#   GPU : onnxruntime-win-x64-gpu-1.23.2.zip (adds onnxruntime_providers_cuda.dll;
+#         the CUDA/cuDNN runtime DLLs must also sit next to it at run time)
+# Extract and place them into:  third_party/onnxruntime/lib/
+third_party/onnxruntime/lib/*.dll
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# --- Editor / OS junk ---
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Logs / temp ---
+*.log

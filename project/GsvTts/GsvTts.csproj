@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>GsvTts</RootNamespace>
+    <AssemblyName>GsvTts</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: missing XML comment on publicly visible type or member (we document the public surface) -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Description>C# P/Invoke wrapper for gsvtts.dll (GSV TTS ONNX inference engine).</Description>
+  </PropertyGroup>
+
+</Project>
